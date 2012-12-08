@@ -418,23 +418,42 @@ public class ProxyMapper {
 		CoapRequest request = context.getInCoapRequest();
 		CoapRequestCode code = request.getRequestCode();
 		//TODO:translate header options from coap-request to http-request
-		NStringEntity entity;
-		entity = new NStringEntity(new String(request.getPayload()));
+		NStringEntity entity = new NStringEntity(new String(request.getPayload()));	
+		entity.setContentType(coapMediaType2HttpMediaType(request));
+		
+		URI httpUri = null;		
+		try {
+			String newUriStr = "http://" + context.getUri().getHost() + ":" + Proxy.COAPtoHTTP_HTTTP_SERVER_PORT + context.getUri().getPath();
+			if (null != context.getUri().getQuery()) {
+				newUriStr += context.getUri().getQuery();
+			}
+			logger.debug("Built uri:" + newUriStr);
+			httpUri = new URI(newUriStr);
+		} catch (URISyntaxException e) {
+			logger.error("Could not re-write uri", e);
+			entity.close();
+			return;
+		}		
+		
 		switch (code) {
 			case GET:
-				httpRequest = new HttpGet(context.getUri().toString());
+				httpRequest = new HttpGet(httpUri);
 				break;
 			case PUT:
-				httpRequest = new HttpPut(context.getUri().toString());	
+				httpRequest = new HttpPut(httpUri);	
 				((HttpPut)httpRequest).setEntity(entity);
 				break;
-			case POST:
-				httpRequest = new HttpPost(context.getUri().toString());
-				((HttpPost)httpRequest).setEntity(entity);
+			case POST:				
+				httpRequest = new HttpPost(httpUri);				
+				((HttpPost) httpRequest).setEntity(entity);
 				break;
 			case DELETE:
-				httpRequest = new HttpDelete(context.getUri().toString());		
+				httpRequest = new HttpDelete(httpUri);
+				break;
 			default:
+				if (null != entity) {
+					entity.close();
+				}
 				throw new IllegalStateException("unknown request code");
 		}
 		
@@ -735,7 +754,38 @@ public class ProxyMapper {
 				throw new IllegalStateException("unknown HTTP response code");
 		}
 	}
-		
+	
+	/**
+	 * Map CoAP content type to Http content type
+	 * 
+	 * Currently support json and text/plain
+	 * 
+	 * @param coapMediaType
+	 * @return Determined Http content type string
+	 * 
+	 */
+	public static String coapMediaType2HttpMediaType(CoapRequest request) {
+		switch (request.getContentType()) {
+		case json:			
+			return "application/json";
+		case UNKNOWN:
+			break;
+		case exi:
+			break;
+		case link_format:
+			break;
+		case octet_stream:
+			break;
+		case text_plain:
+			return "text/plain";
+		case xml:
+			break;
+		default:
+			break;			
+		}
+		return null;
+	}	
+	
 	//mediatype-mapping:
 	public static void httpMediaType2coapMediaType(String mediatype, CoapRequest request) {
 		

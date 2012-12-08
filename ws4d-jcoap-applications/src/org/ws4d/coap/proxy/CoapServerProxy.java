@@ -143,7 +143,7 @@ public class CoapServerProxy implements CoapServer{
 			context.setOutCoapResponse(response);
 			mapper.handleCoapServerRequest(context);
 		} catch (Exception e) {
-			logger.warn("invalid message");
+			logger.warn("Invalid message", e);
 			channel.sendMessage(channel.createResponse(request, CoapResponseCode.Bad_Request_400));
 			channel.close();
 		}

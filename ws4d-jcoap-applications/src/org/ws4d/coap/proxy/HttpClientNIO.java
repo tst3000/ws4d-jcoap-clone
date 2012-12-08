@@ -75,7 +75,7 @@ public class HttpClientNIO extends Thread {
 		}
 
 		public void failed(final Exception ex) {
-			logger.warn("HTTP client request failed");
+			logger.warn("HTTP client request failed", ex);
 			if (context != null) {
 				context.setInHttpResponse(new BasicHttpResponse(HttpVersion.HTTP_1_1, HttpStatus.SC_NOT_FOUND, ex.getMessage()));
 				mapper.handleHttpClientResponse(context);
