@@ -35,6 +35,8 @@ import java.util.TimeZone;
 import net.sf.ehcache.Element;
 
 import org.apache.http.Header;
+import org.apache.http.HeaderElement;
+import org.apache.http.HttpHeaders;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
@@ -183,7 +185,7 @@ public class ProxyMapper {
 					context.setRequestTime(System.currentTimeMillis());
 					httpClient.sendRequest(context); 
 				} catch (Exception e) {
-					logger.warn("CoAP to HTTP Request translation failed: " + e.getMessage());
+					logger.warn("CoAP to HTTP Request translation failed: " + e.getMessage(), e);
 					sendDirectCoapError(context, CoapResponseCode.Not_Found_404);
 				}
 			}
@@ -427,7 +429,7 @@ public class ProxyMapper {
 			if (null != context.getUri().getQuery()) {
 				newUriStr += context.getUri().getQuery();
 			}
-			logger.debug("Built uri:" + newUriStr);
+			logger.debug("Built new URI:" + newUriStr);
 			httpUri = new URI(newUriStr);
 		} catch (URISyntaxException e) {
 			logger.error("Could not re-write uri", e);
@@ -456,6 +458,10 @@ public class ProxyMapper {
 				}
 				throw new IllegalStateException("unknown request code");
 		}
+		
+		// Attach original client address
+		String clientAddress = context.getInCoapRequest().getChannel().getRemoteAddress().getHostAddress();		
+		httpRequest.addHeader("X-Forwarded-For", clientAddress);
 		
 		context.setOutHttpRequest(httpRequest);
 	}
