@@ -159,7 +159,7 @@ public abstract class AbstractCoapMessage implements CoapMessage {
         /* serialize header */
         serializedPacket[0] = (byte) ((this.version & 0x03) << 6);
         serializedPacket[0] |= (byte) ((this.packetType.getValue() & 0x03) << 4);
-        serializedPacket[0] |= (byte) (options.getOptionCount() & 0x0F);
+        //serializedPacket[0] |= (byte) (options.getOptionCount() & 0x0F);
         serializedPacket[1] = (byte) (this.getMessageCodeValue() & 0xFF);
         serializedPacket[2] = (byte) ((this.messageId >> 8) & 0xFF);
         serializedPacket[3] = (byte) (this.messageId & 0xFF);
@@ -233,11 +233,8 @@ public abstract class AbstractCoapMessage implements CoapMessage {
    
     @Override
     public byte[] getToken(){
-    	CoapHeaderOption option = options.getOption(CoapHeaderOptionType.Token);
-    	if (option == null){
-    		return null;
-    	}
-   		return option.getOptionData();
+    	// TODO read token
+	    return null;
     }
     
     protected void setToken(byte[] token){
@@ -247,7 +244,8 @@ public abstract class AbstractCoapMessage implements CoapMessage {
     	if (token.length < 1 || token.length > 8){
     		throw new IllegalArgumentException("Invalid Token Length");
     	}
-    	options.addOption(CoapHeaderOptionType.Token, token);
+    	// TODO set token in message
+	    //options.addOption(CoapHeaderOptionType.Token, token);
     }
     
     @Override
@@ -459,23 +457,22 @@ public abstract class AbstractCoapMessage implements CoapMessage {
 	
 	public enum CoapHeaderOptionType {
 	    UNKNOWN(-1),
-	    Content_Type (1),
-	    Max_Age (2),
-	    Proxy_Uri(3),
+		If_Match(1),
+		Uri_Host(3),
 	    Etag (4),
-	    Uri_Host (5),
-	    Location_Path (6),
+		If_None_Match (5),
+		Observe(6),
 	    Uri_Port (7),
-	    Location_Query (8),
-	    Uri_Path (9),
-	    Observe (10),
-	    Token (11),
-	    Accept (12),
-	    If_Match (13),
-	    Uri_Query (15),
-	    If_None_Match (21),
-	    Block1 (19),
-	    Block2 (17);
+		Location_Path (8),
+		Uri_Path (11),
+		Content_Type (12),
+		Max_Age(14),
+		Uri_Query (15),
+		Accept (16),
+		Location_Query (20),
+		Block2 (23),
+	    Block1 (27),
+		Proxy_Uri(35);
 	    
 	    
 	    int value; 
@@ -486,23 +483,22 @@ public abstract class AbstractCoapMessage implements CoapMessage {
 	    
 	    public static CoapHeaderOptionType parse(int optionTypeValue){
 	    	switch(optionTypeValue){
-	    	case 1: return Content_Type;
-	    	case 2: return Max_Age;
-	    	case 3: return Proxy_Uri;
+	    	case 1: return If_Match;
+	    	case 3: return Uri_Host;
 	    	case 4: return Etag;
-	    	case 5: return Uri_Host;
-	    	case 6: return Location_Path;
+	    	case 5: return If_None_Match;
+	    	case 6: return Observe;
 	    	case 7: return Uri_Port;
-	    	case 8: return Location_Query;
-	    	case 9: return Uri_Path;
-	    	case 10: return Observe;
-	    	case 11:return Token;
-	    	case 12:return Accept;
-	    	case 13:return If_Match;
+	    	case 8: return Location_Path;
+	    	case 11: return Uri_Path;
+	    	case 12:return Content_Type;
+	    	case 14:return Max_Age;
 	    	case 15:return Uri_Query;
-	    	case 21:return If_None_Match;
-	    	case 19:return Block1;
-	    	case 17:return Block2;
+			case 16:return Accept;
+	    	case 20:return Location_Query;
+	    	case 23:return Block2;
+	    	case 27:return Block1;
+			case 35:return Proxy_Uri;
 	    		default: return UNKNOWN;
 	    	}
 	    }
