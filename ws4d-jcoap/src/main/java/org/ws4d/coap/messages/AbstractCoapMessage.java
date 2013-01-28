@@ -51,6 +51,9 @@ public abstract class AbstractCoapMessage implements CoapMessage {
     /* Options */
     protected CoapHeaderOptions options = new CoapHeaderOptions();
 
+
+	protected byte[] token = null;
+
     /* Payload */
     protected byte[] payload = null;
     protected int payloadLength = 0;
@@ -66,21 +69,34 @@ public abstract class AbstractCoapMessage implements CoapMessage {
     	/* check length to avoid buffer overflow exceptions */
     	this.version = 1; 
         this.packetType = (CoapPacketType.getPacketType((bytes[offset + 0] & 0x30) >> 4)); 
-        int optionCount = bytes[offset + 0] & 0x0F;
+
+
+	    int tokenLength = bytes[offset+0]&0x0F;
+	    if (tokenLength<0 || tokenLength>8)
+		    throw new IllegalStateException("Invalid token length: "+token.length);
         this.messageCodeValue = (bytes[offset + 1] & 0xFF);
-        this.messageId = ((bytes[offset + 2] << 8) & 0xFF00) + (bytes[offset + 3] & 0xFF);		
-		
+        this.messageId = ((bytes[offset + 2] << 8) & 0xFF00) + (bytes[offset + 3] & 0xFF);
+
+	    int offsetPos = 4;
+	    if (tokenLength>0) {
+		    this.token = new byte[tokenLength];
+			for (int i=0; i<tokenLength; i++) {
+				this.token[i] = bytes[offset + offsetPos];
+				offsetPos++;
+			}
+	    }
+
         /* serialize options */
-        this.options = new CoapHeaderOptions(bytes, offset + HEADER_LENGTH, optionCount);
+        this.options = new CoapHeaderOptions(bytes, offset + offsetPos);
 		
         /* get and check payload length */
-        payloadLength = length - HEADER_LENGTH - options.getDeserializedLength();
+        payloadLength = length - offsetPos - options.getDeserializedLength();
 		if (payloadLength < 0){
 			throw new IllegalStateException("Invaldid CoAP Message (payload length negative)");
 		}
 		
 		/* copy payload */
-		int payloadOffset = offset + HEADER_LENGTH + options.getDeserializedLength();
+		int payloadOffset = offset + offsetPos + options.getDeserializedLength();
 		payload = new byte[payloadLength];
 		for (int i = 0; i < payloadLength; i++){
 			payload[i] = bytes[i + payloadOffset];
@@ -151,28 +167,46 @@ public abstract class AbstractCoapMessage implements CoapMessage {
             optionsArray = this.options.serialize();
             optionsLength = this.options.getSerializedLength();
         }
+	    int payloadDelimiterLength = 0;
+	    if (optionsLength>0 && payloadLength>0) {
+		    payloadDelimiterLength = 1;
+	    }
+	    int tokenLength = token==null? 0 : token.length;
         
         /* allocate memory for the complete packet */
-        int length = HEADER_LENGTH + optionsLength + payloadLength;
+        int length = HEADER_LENGTH + tokenLength + optionsLength + payloadDelimiterLength + payloadLength;
+
+	    System.out.println(
+			    String.format("LENGTH = %d, tokenLength=%d optionsLength=%d payloaddelim=%d payloadLength=%d",
+					    length, tokenLength, optionsLength, payloadDelimiterLength, payloadLength));
+
+
         byte[] serializedPacket = new byte[length];
         
         /* serialize header */
         serializedPacket[0] = (byte) ((this.version & 0x03) << 6);
         serializedPacket[0] |= (byte) ((this.packetType.getValue() & 0x03) << 4);
-        //serializedPacket[0] |= (byte) (options.getOptionCount() & 0x0F);
+        serializedPacket[0] |= (byte) (tokenLength & 0x0F);
         serializedPacket[1] = (byte) (this.getMessageCodeValue() & 0xFF);
         serializedPacket[2] = (byte) ((this.messageId >> 8) & 0xFF);
         serializedPacket[3] = (byte) (this.messageId & 0xFF);
 
-        /* copy serialized options to the final array */
-        int offset = HEADER_LENGTH;
+	    /* copy serialized options to the final array */
+   	    int offset = HEADER_LENGTH;
+	    for (int i= 0; i<tokenLength; i++) {
+		    serializedPacket[i+offset] = token[i];
+	    }
+	    offset += tokenLength;
+
         if (options != null) {
             for (int i = 0; i < optionsLength; i++)
                 serializedPacket[i + offset] = optionsArray[i];
+	        if (optionsLength>0 && payloadLength>0) {
+		        serializedPacket[offset+optionsLength] = (byte) 0xff;
+		        offset += optionsLength+1;
+	        }
         }
-        
         /* copy payload to the final array */
-        offset = HEADER_LENGTH + optionsLength; 
         for (int i = 0; i < this.payloadLength; i++) {
         	serializedPacket[i + offset] = payload[i];
         }
@@ -549,6 +583,7 @@ public abstract class AbstractCoapMessage implements CoapMessage {
 	    public CoapHeaderOption(byte[] bytes, int offset, int lastOptionNumber){
 	    	int headerLength;
 	    	/* parse option type */
+
 	    	optionTypeValue = ((bytes[offset] & 0xF0) >> 4) + lastOptionNumber;
 	    	optionType = CoapHeaderOptionType.parse(optionTypeValue);
 	    	if (optionType == CoapHeaderOptionType.UNKNOWN){
@@ -641,23 +676,31 @@ public abstract class AbstractCoapMessage implements CoapMessage {
 		private int deserializedLength;
 		private int serializedLength = 0;
 		
-		public CoapHeaderOptions(byte[] bytes, int option_count){
-			this(bytes, option_count, option_count);
-		}
-		
-		public CoapHeaderOptions(byte[] bytes, int offset, int optionCount){
+
+		public CoapHeaderOptions(byte[] bytes, int offset){
 			/* note: we only receive deltas and never concrete numbers */
 			/* TODO: check integrity */
 			deserializedLength = 0;
 			int lastOptionNumber = 0;
+
+			// no payload, no options
+			if (offset>=bytes.length)
+				return;
+
 			int optionOffset = offset;
-			for (int i = 0; i < optionCount; i++) {
+			while (true) {
+				// Payload delimiter
+				if ((bytes[optionOffset]&0xff)==0xff) {
+					++deserializedLength;
+					break;
+				}
 				CoapHeaderOption option = new CoapHeaderOption(bytes, optionOffset, lastOptionNumber);
 				lastOptionNumber = option.getOptionTypeValue();
 				deserializedLength += option.getDeserializedLength(); 
 				optionOffset += option.getDeserializedLength();
 				addOption(option);
 			}
+
 		}
 		
 		public CoapHeaderOptions() {
