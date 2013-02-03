@@ -591,16 +591,17 @@ public abstract class AbstractCoapMessage implements CoapMessage {
 	    		}
 	    	}
 	    	/* parse length */
-			if ((bytes[offset] & 0x0F) < 13) {
+			if ((bytes[offset] & 0x0F) <= 12) {
 				optionLength = bytes[offset] & 0x0F;
 				headerLength = 1;
-			} else {
-				headerLength = 2;
-				throw new IllegalStateException("NOT IMPLEMENTED YET");
-
-				/*shortLength = 15;
-				longLength = bytes[offset + 1];
-				headerLength = 2; /* additional length byte */
+            } else if((bytes[offset] & 0x0F) == 13) {
+                optionLength = bytes[offset] & 0x0F;
+                headerLength = 2;
+            } else if((bytes[offset] & 0x0F) == 14) {
+                optionLength = bytes[offset] & 0x0F;
+                headerLength = 3;
+            } else {
+				throw new IllegalStateException("Invalid option length field");
 			}
 			
 			/* copy value */
@@ -632,10 +633,11 @@ public abstract class AbstractCoapMessage implements CoapMessage {
 	    }
 	    
 	    public int getSerializeLength(){
-	    	if (optionLength<13)
-			    return optionLength+1;
-		    // TODO
-		    return -1;
+	    	if (optionLength>255)
+			    return optionLength+3;
+            else if (optionLength>12)
+                return optionLength+2;
+		    return optionLength+1;
 	    }
 	
 	    @Override

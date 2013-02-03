@@ -278,7 +278,6 @@ public class ProxyMapper {
 			out.setUriQuery(context.getUri().getQuery());
 		}
 
-		out.removeOption(CoapHeaderOptionType.Token);
 		out.setPayload(in.getPayload());
 	}
 	
@@ -474,7 +473,6 @@ public class ProxyMapper {
 		((BasicCoapResponse) out).copyHeaderOptions((BasicCoapResponse)in);
 		
 		out.setResponseCode(in.getResponseCode());
-		out.removeOption(CoapHeaderOptionType.Token);
 		out.setPayload(in.getPayload());
 	}
 
@@ -766,7 +764,7 @@ public class ProxyMapper {
 	 * 
 	 * Currently support json and text/plain
 	 * 
-	 * @param coapMediaType
+	 * @param request
 	 * @return Determined Http content type string
 	 * 
 	 */
