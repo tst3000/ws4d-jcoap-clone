@@ -176,11 +176,6 @@ public abstract class AbstractCoapMessage implements CoapMessage {
         /* allocate memory for the complete packet */
         int length = HEADER_LENGTH + tokenLength + optionsLength + payloadDelimiterLength + payloadLength;
 
-	    System.out.println(
-			    String.format("LENGTH = %d, tokenLength=%d optionsLength=%d payloaddelim=%d payloadLength=%d",
-					    length, tokenLength, optionsLength, payloadDelimiterLength, payloadLength));
-
-
         byte[] serializedPacket = new byte[length];
         
         /* serialize header */
@@ -191,21 +186,25 @@ public abstract class AbstractCoapMessage implements CoapMessage {
         serializedPacket[2] = (byte) ((this.messageId >> 8) & 0xFF);
         serializedPacket[3] = (byte) (this.messageId & 0xFF);
 
-	    /* copy serialized options to the final array */
+	    /* copy token to final array */
    	    int offset = HEADER_LENGTH;
 	    for (int i= 0; i<tokenLength; i++) {
 		    serializedPacket[i+offset] = token[i];
 	    }
 	    offset += tokenLength;
 
+	    /* copy serialized options to the final array */
         if (options != null) {
             for (int i = 0; i < optionsLength; i++)
                 serializedPacket[i + offset] = optionsArray[i];
+
+	        /* if both options and payload are present, insert the payload delimiter 0xff */
 	        if (optionsLength>0 && payloadLength>0) {
 		        serializedPacket[offset+optionsLength] = (byte) 0xff;
 		        offset += optionsLength+1;
 	        }
         }
+
         /* copy payload to the final array */
         for (int i = 0; i < this.payloadLength; i++) {
         	serializedPacket[i + offset] = payload[i];
@@ -556,7 +555,7 @@ public abstract class AbstractCoapMessage implements CoapMessage {
 		int optionLength;
 
 	    int deserializedLength;
-	    static final int MAX_LENGTH = 270;
+	    static final int MAX_LENGTH = 65535;
 	
 	    public int getDeserializedLength() {
 			return deserializedLength;
@@ -595,19 +594,19 @@ public abstract class AbstractCoapMessage implements CoapMessage {
 				optionLength = bytes[offset] & 0x0F;
 				headerLength = 1;
             } else if((bytes[offset] & 0x0F) == 13) {
-                optionLength = bytes[offset] & 0x0F;
+                optionLength = (bytes[offset+1]&0xFF) + 13;
                 headerLength = 2;
             } else if((bytes[offset] & 0x0F) == 14) {
-                optionLength = bytes[offset] & 0x0F;
+                optionLength = ((bytes[offset+1]&0xFF)<<8) + (bytes[offset+2]&0xFF) + 269;
                 headerLength = 3;
             } else {
 				throw new IllegalStateException("Invalid option length field");
 			}
-			
+
 			/* copy value */
 			optionData = new byte[optionLength];
 			for (int i = 0; i < optionLength; i++){
-				optionData[i] = bytes[i + optionLength + offset];
+				optionData[i] = bytes[i + headerLength + offset];
 			}
 			deserializedLength += headerLength + optionLength;
 	    }
@@ -779,14 +778,15 @@ public abstract class AbstractCoapMessage implements CoapMessage {
 	            // set length(s)
 		        if (headerOption.optionLength <= 12) {
 			        data[arrayIndex++] = (byte) (((optionDelta & 0x0F) << 4) | (headerOption.optionLength & 0x0F));
-		        } else if (headerOption.optionLength <= 255) {
+		        } else if (headerOption.optionLength <= 268) {
 			        data[arrayIndex++] = (byte) (((optionDelta & 0x0F) << 4) | 13);
 			        data[arrayIndex++] = (byte) ((headerOption.optionLength & 0xff) - 13);
-		        }
-		        /*else if (headerOption.optionLength <= 255) {
-			        data[arrayIndex++] = (byte) (((optionDelta & 0x0F) << 4) | 13);
-
-		        }*/ else {
+		        } else if (headerOption.optionLength <= CoapHeaderOption.MAX_LENGTH) {
+			        data[arrayIndex++] = (byte) (((optionDelta & 0x0F) << 4) | 14);
+			        int ln = headerOption.optionLength - 269;
+			        data[arrayIndex++] = (byte) (((ln&0xFF00)>>8)&0xff);
+			        data[arrayIndex++] = (byte) (ln&0xff);
+		        } else {
 			        throw new IllegalStateException("Invalid option length");
 		        }
 
