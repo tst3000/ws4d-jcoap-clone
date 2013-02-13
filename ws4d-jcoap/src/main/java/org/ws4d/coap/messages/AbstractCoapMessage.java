@@ -87,7 +87,7 @@ public abstract class AbstractCoapMessage implements CoapMessage {
 	    }
 
         /* serialize options */
-        this.options = new CoapHeaderOptions(bytes, offset + offsetPos);
+        this.options = new CoapHeaderOptions(bytes, length, offset + offsetPos);
 		
         /* get and check payload length */
         payloadLength = length - offsetPos - options.getDeserializedLength();
@@ -661,23 +661,28 @@ public abstract class AbstractCoapMessage implements CoapMessage {
 		private int serializedLength = 0;
 		
 
-		public CoapHeaderOptions(byte[] bytes, int offset){
+		public CoapHeaderOptions(byte[] bytes, int length, int offset){
 			/* note: we only receive deltas and never concrete numbers */
 			/* TODO: check integrity */
 			deserializedLength = 0;
 			int lastOptionNumber = 0;
 
 			// no payload, no options
-			if (offset>=bytes.length)
+			if (offset>=length)
 				return;
 
 			int optionOffset = offset;
 			while (true) {
+				if (optionOffset>=length)
+					return;
+
 				// Payload delimiter
 				if ((bytes[optionOffset]&0xff)==0xff) {
 					++deserializedLength;
 					break;
 				}
+
+
 				CoapHeaderOption option = new CoapHeaderOption(bytes, optionOffset, lastOptionNumber);
 				lastOptionNumber = option.getOptionTypeValue();
 				deserializedLength += option.getDeserializedLength(); 
