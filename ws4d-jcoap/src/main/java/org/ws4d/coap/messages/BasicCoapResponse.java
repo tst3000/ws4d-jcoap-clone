@@ -85,6 +85,32 @@ public class BasicCoapResponse extends AbstractCoapMessage implements CoapRespon
     }
 
 	@Override
+	public void setLocationPath(String path) {
+		if (path == null) return;
+
+		if (path.length() > CoapHeaderOption.MAX_LENGTH ){
+			throw new IllegalArgumentException("Location-Path option too long");
+		}
+
+		/* delete old options if present */
+		options.removeOption(CoapHeaderOptionType.Location_Path);
+
+		/*create substrings */
+		String[] pathElements = path.split("/");
+		/* add a Uri Path option for each part */
+		for (String element : pathElements) {
+			/* check length */
+			if(element.length() < 0 || element.length() > CoapHeaderOption.MAX_LENGTH){
+				throw new IllegalArgumentException("Invalid Uri-Path");
+			} else if (element.length() > 0){
+				/* ignore empty substrings */
+				options.addOption(CoapHeaderOptionType.Location_Path, element.getBytes());
+			}
+		}
+	}
+
+
+	@Override
 	public boolean isRequest() {
 		return false;
 	}
@@ -111,4 +137,5 @@ public class BasicCoapResponse extends AbstractCoapMessage implements CoapRespon
     		this.messageCodeValue = responseCode.getValue();
 		}
 	}
+
 }
