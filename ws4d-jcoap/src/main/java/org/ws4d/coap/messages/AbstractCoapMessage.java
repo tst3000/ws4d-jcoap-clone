@@ -571,6 +571,7 @@ public abstract class AbstractCoapMessage implements CoapMessage {
 	    	}
 	    	
 	        this.optionTypeValue = optionType.getValue();
+			this.optionType = optionType;
 	        this.optionData = value;
 			this.optionLength = value.length;
 	    }
