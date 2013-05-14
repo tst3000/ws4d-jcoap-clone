@@ -88,7 +88,7 @@ public abstract class AbstractCoapMessage implements CoapMessage {
 
         /* serialize options */
         this.options = new CoapHeaderOptions(bytes, length, offset + offsetPos);
-		
+
         /* get and check payload length */
         payloadLength = length - offsetPos - options.getDeserializedLength();
 		if (payloadLength < 0){
@@ -577,29 +577,39 @@ public abstract class AbstractCoapMessage implements CoapMessage {
 	    }
 	    
 	    public CoapHeaderOption(byte[] bytes, int offset, int lastOptionNumber){
-	    	int headerLength;
+	    	int headerLength = 1;
 	    	/* parse option type */
+		    int localOffset = offset;
 
-	    	optionTypeValue = ((bytes[offset] & 0xF0) >> 4) + lastOptionNumber;
+
+
+		    int  delta = ((bytes[localOffset] & 0xF0) >> 4);
+		    localOffset++;
+
+		    if (delta == 13) {
+			    byte delta2 = bytes[localOffset];
+			    localOffset++;
+			    headerLength++;
+			    delta += delta2;
+
+		    }
+		    optionTypeValue = delta + lastOptionNumber;
+
 	    	optionType = CoapHeaderOptionType.parse(optionTypeValue);
 	    	if (optionType == CoapHeaderOptionType.UNKNOWN){
-	    		if (optionTypeValue % 14 == 0){
-	    			/* no-op: no operation for deltas > 14 */
-	    		} else {
-	    			/*TODO: implement check if it is a critical option */
-	    			throw new IllegalArgumentException("Unknown header option");
-	    		}
+	    		/*TODO: implement check if it is a critical option */
+	    		throw new IllegalArgumentException("Unknown header option");
 	    	}
+
 	    	/* parse length */
 			if ((bytes[offset] & 0x0F) <= 12) {
 				optionLength = bytes[offset] & 0x0F;
-				headerLength = 1;
             } else if((bytes[offset] & 0x0F) == 13) {
-                optionLength = (bytes[offset+1]&0xFF) + 13;
-                headerLength = 2;
+                optionLength = (bytes[localOffset]&0xFF) + 13;
+                headerLength += 2;
             } else if((bytes[offset] & 0x0F) == 14) {
-                optionLength = ((bytes[offset+1]&0xFF)<<8) + (bytes[offset+2]&0xFF) + 269;
-                headerLength = 3;
+                optionLength = ((bytes[localOffset]&0xFF)<<8) + (bytes[localOffset+1]&0xFF) + 269;
+                headerLength += 3;
             } else {
 				throw new IllegalStateException("Invalid option length field");
 			}
@@ -607,9 +617,11 @@ public abstract class AbstractCoapMessage implements CoapMessage {
 			/* copy value */
 			optionData = new byte[optionLength];
 			for (int i = 0; i < optionLength; i++){
-				optionData[i] = bytes[i + headerLength + offset];
+				optionData[i] = bytes[i + headerLength + localOffset];
 			}
+
 			deserializedLength += headerLength + optionLength;
+
 	    }
 	
 	    @Override
@@ -633,11 +645,15 @@ public abstract class AbstractCoapMessage implements CoapMessage {
 	    }
 	    
 	    public int getSerializeLength(){
+		    int l = optionLength;
 	    	if (optionLength>255)
-			    return optionLength+3;
+			    l += 3;
             else if (optionLength>12)
-                return optionLength+2;
-		    return optionLength+1;
+                l += 2;
+		    else
+			    l += 1;
+		    return l;
+
 	    }
 	
 	    @Override
@@ -770,39 +786,77 @@ public abstract class AbstractCoapMessage implements CoapMessage {
 
 	        /* calculate the overall length first */
 	        for (CoapHeaderOption option : headerOptions) {
-	            length += option.getSerializeLength();
+	            length += option.getSerializeLength() + 4; // reserve space for option delta ext.
 	        }
-
-	        byte[] data = new byte[length];
-	        int arrayIndex = 0;
+		    ByteBuffer buffer = ByteBuffer.allocate(length);
 
 	        int lastOptionNumber = 0; /* let's keep track of this */
 	        for (CoapHeaderOption headerOption : headerOptions) {
 	        	/* TODO: move the serialization implementation to CoapHeaderOption */
-	            int optionDelta = headerOption.getOptionTypeValue() - lastOptionNumber;
+
+
+
+		        int optionDelta = headerOption.getOptionTypeValue() - lastOptionNumber;
+
 	            lastOptionNumber = headerOption.getOptionTypeValue();
-	            // set length(s)
+
+
+		        int optionD;
+		        int optionL;
+
+		        if (optionDelta <= 12) {
+			        optionD = optionDelta;
+		        } else if (optionDelta <= 268) {
+			        optionD = 13;
+		        } else {
+			        throw new IllegalStateException("Invalid option delta");
+		        }
+
+
+	            // determine option length
 		        if (headerOption.optionLength <= 12) {
-			        data[arrayIndex++] = (byte) (((optionDelta & 0x0F) << 4) | (headerOption.optionLength & 0x0F));
+			        optionL = headerOption.optionLength & 0x0F;
 		        } else if (headerOption.optionLength <= 268) {
-			        data[arrayIndex++] = (byte) (((optionDelta & 0x0F) << 4) | 13);
-			        data[arrayIndex++] = (byte) ((headerOption.optionLength & 0xff) - 13);
+			        optionL = 13;
 		        } else if (headerOption.optionLength <= CoapHeaderOption.MAX_LENGTH) {
-			        data[arrayIndex++] = (byte) (((optionDelta & 0x0F) << 4) | 14);
-			        int ln = headerOption.optionLength - 269;
-			        data[arrayIndex++] = (byte) (((ln&0xFF00)>>8)&0xff);
-			        data[arrayIndex++] = (byte) (ln&0xff);
+			        optionL = 14;
 		        } else {
 			        throw new IllegalStateException("Invalid option length");
 		        }
 
+		        buffer.put((byte) (((optionD & 0x0F) << 4) | (optionL & 0x0F)));
+
+		        // Ext. delta
+		        if (optionDelta <= 12) {
+                } else if (optionDelta <= 268) {
+                    buffer.put((byte) ((optionDelta & 0xff) - 13));
+                } else {
+                    throw new IllegalStateException("Invalid option length");
+                }
+
+
+		        // Ext. length
+		        if (headerOption.optionLength <= 12) {
+		        } else if (headerOption.optionLength <= 268) {
+			        buffer.put((byte) ((headerOption.optionLength & 0xff) - 13));
+		        } else if (headerOption.optionLength <= CoapHeaderOption.MAX_LENGTH) {
+			        int ln = headerOption.optionLength - 269;
+			        buffer.put((byte) (((ln&0xFF00)>>8)&0xff));
+			        buffer.put((byte) (ln&0xff));
+		        } else {
+			        throw new IllegalStateException("Invalid option length");
+		        }
+
+
 	            // copy option value
-	            byte[] value = headerOption.getOptionData();
-	            for (int i = 0; i < value.length; i++) {
-	                data[arrayIndex++] = value[i];
-	            }
+		        buffer.put(headerOption.getOptionData());
+
+
 	        }
-	        serializedLength = length;
+		    serializedLength = buffer.position();
+		    byte[] data = new byte[buffer.position()];
+		    buffer.flip();
+		    buffer.get(data);
 	        return data;
 	    }
 
