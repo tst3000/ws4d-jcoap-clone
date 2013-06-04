@@ -514,7 +514,7 @@ public abstract class AbstractCoapMessage implements CoapMessage {
 	    }
 	    
 	    public static CoapHeaderOptionType parse(int optionTypeValue){
-	    	switch(optionTypeValue){
+		    switch(optionTypeValue){
 	    	case 1: return If_Match;
 	    	case 3: return Uri_Host;
 	    	case 4: return Etag;
@@ -531,7 +531,8 @@ public abstract class AbstractCoapMessage implements CoapMessage {
 	    	case 23:return Block2;
 	    	case 27:return Block1;
 			case 35:return Proxy_Uri;
-	    		default: return UNKNOWN;
+	    	default:
+			    return UNKNOWN;
 	    	}
 	    }
 	    
@@ -606,18 +607,19 @@ public abstract class AbstractCoapMessage implements CoapMessage {
 				optionLength = bytes[offset] & 0x0F;
             } else if((bytes[offset] & 0x0F) == 13) {
                 optionLength = (bytes[localOffset]&0xFF) + 13;
-                headerLength += 2;
+                headerLength += 1;
+				localOffset += 1;
             } else if((bytes[offset] & 0x0F) == 14) {
                 optionLength = ((bytes[localOffset]&0xFF)<<8) + (bytes[localOffset+1]&0xFF) + 269;
-                headerLength += 3;
+                headerLength += 2;
+				localOffset += 2;
             } else {
 				throw new IllegalStateException("Invalid option length field");
 			}
-
 			/* copy value */
 			optionData = new byte[optionLength];
 			for (int i = 0; i < optionLength; i++){
-				optionData[i] = bytes[i + headerLength + localOffset];
+				optionData[i] = bytes[i + localOffset];
 			}
 
 			deserializedLength += headerLength + optionLength;
@@ -690,6 +692,7 @@ public abstract class AbstractCoapMessage implements CoapMessage {
 
 			int optionOffset = offset;
 			while (true) {
+
 				if (optionOffset>=length)
 					return;
 
