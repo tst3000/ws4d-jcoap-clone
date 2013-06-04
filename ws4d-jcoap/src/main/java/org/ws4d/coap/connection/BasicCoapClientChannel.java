@@ -136,7 +136,8 @@ public class BasicCoapClientChannel extends BasicCoapChannel implements CoapClie
     public void sendMessage(CoapMessage msg) {
         super.sendMessage(msg);
         //TODO: check
-        lastRequest = (CoapRequest) msg;
+	    if (msg instanceof CoapRequest)
+	        lastRequest = (CoapRequest) msg;
     }
 
     // public DefaultCoapClientChannel(CoapChannelManager channelManager) {
