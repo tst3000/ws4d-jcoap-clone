@@ -71,7 +71,12 @@ public class BasicCoapClientChannel extends BasicCoapChannel implements CoapClie
 		if (message.getPacketType() == CoapPacketType.CON) {
 			/* this is a separate response */
 			/* send ACK */
-			this.sendMessage(new CoapEmptyMessage(CoapPacketType.ACK, message.getMessageID()));
+			if (this.client.shouldAcknowledgeSeparate(message)) {
+				this.sendMessage(new CoapEmptyMessage(CoapPacketType.ACK, message.getMessageID()));
+			} else {
+				this.sendMessage(new CoapEmptyMessage(CoapPacketType.RST, message.getMessageID()));
+				return;
+			}
 		} 
 		
 		/* check for blockwise transfer */
