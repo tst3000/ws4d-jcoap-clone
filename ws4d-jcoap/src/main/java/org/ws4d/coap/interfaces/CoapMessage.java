@@ -101,5 +101,5 @@ public interface CoapMessage {
     public boolean equals(Object obj);
 
 
-
+	Integer getContentTypeInt();
 }

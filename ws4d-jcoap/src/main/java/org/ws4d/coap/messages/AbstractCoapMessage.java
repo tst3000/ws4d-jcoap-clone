@@ -256,14 +256,23 @@ public abstract class AbstractCoapMessage implements CoapMessage {
     public CoapMediaType getContentType(){
     	CoapHeaderOption option = options.getOption(CoapHeaderOptionType.Content_Type);
     	if (option == null){
-    		/* not content type TODO: return UNKNOWN ?*/
     		return null;
     	}
     	/* no need to check length, CoapMediaType parse function will do*/
-    	int mediaTypeCode = (int) coapUint2Long(options.getOption(CoapHeaderOptionType.Content_Type).getOptionData());
+    	int mediaTypeCode = (int) coapUint2Long(option.getOptionData());
     	return CoapMediaType.parse(mediaTypeCode);
     }
-   
+
+	@Override
+	public Integer getContentTypeInt(){
+		CoapHeaderOption option = options.getOption(CoapHeaderOptionType.Content_Type);
+		if (option == null){
+			return null;
+		}
+		int mediaTypeCode = (int) coapUint2Long(option.getOptionData());
+		return Integer.valueOf(mediaTypeCode);
+	}
+
     @Override
     public byte[] getToken(){
 	    return token;

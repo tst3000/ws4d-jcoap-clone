@@ -26,7 +26,7 @@ public enum CoapMediaType {
     	case 42:return octet_stream;
     	case 47:return exi;
     	case 50:return json;
-    		default: return UNKNOWN;
+   		default: return UNKNOWN;
     	}
     }
     
