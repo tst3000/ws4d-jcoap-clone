@@ -1,9 +1,7 @@
 package org.ws4d.coap.rest;
 
-import java.util.HashMap;
-import java.util.Vector;
-
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.ws4d.coap.interfaces.CoapChannel;
 import org.ws4d.coap.interfaces.CoapRequest;
 import org.ws4d.coap.interfaces.CoapResponse;
@@ -11,14 +9,17 @@ import org.ws4d.coap.interfaces.CoapServerChannel;
 import org.ws4d.coap.messages.CoapMediaType;
 import org.ws4d.coap.messages.CoapResponseCode;
 
+import java.util.HashMap;
+import java.util.Vector;
+
 /**
  * @author Christian Lerche <christian.lerche@uni-rostock.de>
  */
 
 public class BasicCoapResource implements CoapResource {
 	/* use the logger of the resource server */
-	private final static Logger logger = Logger.getLogger(CoapResourceServer.class); 
-	
+	private static final Logger logger = LoggerFactory.getLogger(BasicCoapResource.class);
+
     private CoapMediaType mediaType;
     private String path;
     private byte[] value;

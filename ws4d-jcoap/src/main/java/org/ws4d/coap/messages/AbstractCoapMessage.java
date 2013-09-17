@@ -27,7 +27,8 @@ import java.util.Iterator;
 import java.util.Random;
 import java.util.Vector;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.ws4d.coap.connection.BasicCoapChannelManager;
 import org.ws4d.coap.interfaces.CoapChannel;
 import org.ws4d.coap.interfaces.CoapMessage;
@@ -37,8 +38,9 @@ import org.ws4d.coap.interfaces.CoapMessage;
  */
 
 public abstract class AbstractCoapMessage implements CoapMessage {
-	/* use the logger of the channel manager */
-	private final static Logger logger = Logger.getLogger(BasicCoapChannelManager.class); 
+
+	private static final Logger logger = LoggerFactory.getLogger(AbstractCoapMessage.class);
+
 	protected static final int HEADER_LENGTH = 4;
 	
 	/* Header */

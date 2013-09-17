@@ -20,6 +20,7 @@ package org.ws4d.coap.interfaces;
 
 import java.net.InetAddress;
 
+import org.ws4d.coap.connection.BasicCoapSocketHandler;
 import org.ws4d.coap.messages.BasicCoapRequest;
 
 
@@ -41,4 +42,6 @@ public interface CoapChannelManager {
     public void setMessageId(int globalMessageId);
     
     public void initRandom();
+
+
 }

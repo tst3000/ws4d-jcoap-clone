@@ -15,21 +15,8 @@
 
 package org.ws4d.coap.connection;
 
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
-import java.nio.channels.DatagramChannel;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.util.HashMap;
-import java.util.PriorityQueue;
-import java.util.concurrent.ConcurrentLinkedQueue;
-
-import org.apache.log4j.ConsoleAppender;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.apache.log4j.SimpleLayout;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.ws4d.coap.interfaces.CoapChannel;
 import org.ws4d.coap.interfaces.CoapChannelManager;
 import org.ws4d.coap.interfaces.CoapClient;
@@ -42,6 +29,17 @@ import org.ws4d.coap.messages.CoapEmptyMessage;
 import org.ws4d.coap.messages.CoapPacketType;
 import org.ws4d.coap.tools.TimeoutHashMap;
 
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.DatagramChannel;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.util.HashMap;
+import java.util.PriorityQueue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
 /**
  * @author Christian Lerche <christian.lerche@uni-rostock.de>
  * @author Nico Laum <nico.laum@uni-rostock.de>
@@ -50,7 +48,9 @@ import org.ws4d.coap.tools.TimeoutHashMap;
 public class BasicCoapSocketHandler implements CoapSocketHandler {
 	/* the socket handler has its own logger
 	 * TODO: implement different socket handler for client and server channels */
-	private final static Logger logger = Logger.getLogger(BasicCoapSocketHandler.class); 
+
+	private static final Logger logger = LoggerFactory.getLogger(BasicCoapSocketHandler.class);
+
     protected WorkerThread workerThread = null;
     protected HashMap<ChannelKey, CoapClientChannel> clientChannels = new HashMap<ChannelKey, CoapClientChannel>();
     protected HashMap<ChannelKey, CoapServerChannel> serverChannels = new HashMap<ChannelKey, CoapServerChannel>();
@@ -65,10 +65,6 @@ public class BasicCoapSocketHandler implements CoapSocketHandler {
     private int localPort;
 
     public BasicCoapSocketHandler(CoapChannelManager channelManager, int port) throws IOException {
-        logger.addAppender(new ConsoleAppender(new SimpleLayout()));
-        // ALL | DEBUG | INFO | WARN | ERROR | FATAL | OFF:
-        logger.setLevel(Level.WARN);
-    	
     	this.channelManager = channelManager;
         dgramChannel = DatagramChannel.open();
        	dgramChannel.socket().bind(new InetSocketAddress(port)); //port can be 0, then a free port is chosen 
@@ -119,6 +115,7 @@ public class BasicCoapSocketHandler implements CoapSocketHandler {
 		}
 
 		public void close() {
+			logger.debug("closing workerThread");
 	        if (clientChannels != null)
 	        	clientChannels.clear();
 	        if (serverChannels != null)
@@ -127,14 +124,14 @@ public class BasicCoapSocketHandler implements CoapSocketHandler {
 	        try {
 				dgramChannel.close();
 			} catch (IOException e) {
-				e.printStackTrace();
+		        logger.error("Error closing dgramChannel", e);
 			}
 	        /* TODO: wake up thread and kill it*/
 		}
 		
 		@Override
 		public void run() {
-		    logger.log(Level.INFO, "Receive Thread started.");
+		    logger.info("Receive Thread started.");
 			long waitFor = POLLING_INTERVALL;
 			InetSocketAddress addr = null;
 			
@@ -147,11 +144,11 @@ public class BasicCoapSocketHandler implements CoapSocketHandler {
 				try {
 					addr = (InetSocketAddress) dgramChannel.receive(dgramBuffer);
 				} catch (IOException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
+					logger.error("receive exception", e1);
+					return;
 				}
 				if (addr != null){
-					logger.log(Level.INFO, "handle incomming msg");
+					logger.info("handle incomming msg");
 					handleIncommingMessage(dgramBuffer, addr);
 				}
 				
@@ -173,8 +170,8 @@ public class BasicCoapSocketHandler implements CoapSocketHandler {
 					 * move this check and the select to a critical section */
 					selector.select(waitFor);
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+					logger.error("receive exception", e);
+					return;
 				}
 			}
 		}
@@ -431,7 +428,7 @@ public class BasicCoapSocketHandler implements CoapSocketHandler {
 			/*TODO: check if serialization could fail... then do not put it to any Map!*/
 		    try {
 		    	dgramChannel.send(buf, new InetSocketAddress(inetAddr, port));
-		        logger.log(Level.INFO, "Send Msg with ID: " + msg.getMessageID());
+		        logger.info("Send Msg with ID: {}", msg.getMessageID());
 		    } catch (IOException e) {
 		    	e.printStackTrace();
 		    	logger.error("Send UDP message failed");
@@ -524,6 +521,7 @@ public class BasicCoapSocketHandler implements CoapSocketHandler {
 	@Override
     public void removeClientChannel(CoapClientChannel channel) {
         clientChannels.remove(new ChannelKey(channel.getRemoteAddress(), channel.getRemotePort()));
+		close();
     }
 	
 	@Override

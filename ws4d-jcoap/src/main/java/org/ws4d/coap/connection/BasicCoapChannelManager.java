@@ -15,15 +15,8 @@
 
 package org.ws4d.coap.connection;
 
-import java.io.IOException;
-import java.net.InetAddress;
-import java.util.HashMap;
-import java.util.Random;
-
-import org.apache.log4j.ConsoleAppender;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.apache.log4j.SimpleLayout;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.ws4d.coap.Constants;
 import org.ws4d.coap.interfaces.CoapChannelManager;
 import org.ws4d.coap.interfaces.CoapClient;
@@ -34,22 +27,25 @@ import org.ws4d.coap.interfaces.CoapServerChannel;
 import org.ws4d.coap.interfaces.CoapSocketHandler;
 import org.ws4d.coap.messages.BasicCoapRequest;
 
+import java.io.IOException;
+import java.net.InetAddress;
+import java.util.HashMap;
+import java.util.Random;
+
 /**
  * @author Christian Lerche <christian.lerche@uni-rostock.de>
  */
 
 public class BasicCoapChannelManager implements CoapChannelManager {
-    // global message id
-	private final static Logger logger = Logger.getLogger(BasicCoapChannelManager.class); 
+
+	private static final Logger logger = LoggerFactory.getLogger(BasicCoapChannelManager.class);
+
     private int globalMessageId;
     private static BasicCoapChannelManager instance;
     private HashMap<Integer, SocketInformation> socketMap = new HashMap<Integer, SocketInformation>();
     CoapServer serverListener = null;
 
     private BasicCoapChannelManager() {
-        logger.addAppender(new ConsoleAppender(new SimpleLayout()));
-        // ALL | DEBUG | INFO | WARN | ERROR | FATAL | OFF:
-        logger.setLevel(Level.WARN);
     	initRandom();
     }
 
@@ -104,15 +100,14 @@ public class BasicCoapChannelManager implements CoapChannelManager {
         globalMessageId = random.nextInt(Constants.MESSAGE_ID_MAX + 1);
     }
 
-   
-    @Override
+	@Override
     public void createServerListener(CoapServer serverListener, int localPort) {
         if (!socketMap.containsKey(localPort)) {
             try {
             	SocketInformation socketInfo = new SocketInformation(new BasicCoapSocketHandler(this, localPort), serverListener);
             	socketMap.put(localPort, socketInfo);
             } catch (IOException e) {
-				e.printStackTrace();
+	            logger.error("Cannot create server listener", e);
 			}
         } else {
         	/*TODO: raise exception: address already in use */
@@ -125,12 +120,9 @@ public class BasicCoapChannelManager implements CoapChannelManager {
     	CoapSocketHandler socketHandler = null;
 		try {
 			socketHandler = new BasicCoapSocketHandler(this);
-			SocketInformation sockInfo = new SocketInformation(socketHandler, null); 
-			socketMap.put(socketHandler.getLocalPort(), sockInfo);
 			return socketHandler.connect(client, addr, port);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error("Cannot connect", e);
 		}
 		return null;
 	}

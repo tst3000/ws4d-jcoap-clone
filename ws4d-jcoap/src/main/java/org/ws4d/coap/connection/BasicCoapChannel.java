@@ -15,22 +15,25 @@
 
 package org.ws4d.coap.connection;
 
-import java.net.InetAddress;
-
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.ws4d.coap.interfaces.CoapChannel;
 import org.ws4d.coap.interfaces.CoapChannelManager;
 import org.ws4d.coap.interfaces.CoapMessage;
 import org.ws4d.coap.interfaces.CoapSocketHandler;
 import org.ws4d.coap.messages.CoapBlockOption.CoapBlockSize;
 
+import java.net.InetAddress;
+
 /**
  * @author Christian Lerche <christian.lerche@uni-rostock.de>
  */
 
 public abstract class BasicCoapChannel implements CoapChannel {
-	/* use the logger of the channel manager */
-	private final static Logger logger = Logger.getLogger(BasicCoapChannelManager.class); 
+
+	private static final Logger logger = LoggerFactory.getLogger(BasicCoapChannel.class);
+
+
 	protected CoapSocketHandler socketHandler = null;
     protected CoapChannelManager channelManager = null;
     protected InetAddress remoteAddress;

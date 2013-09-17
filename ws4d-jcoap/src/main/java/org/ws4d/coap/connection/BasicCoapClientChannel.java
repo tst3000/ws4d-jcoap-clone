@@ -15,9 +15,8 @@
 
 package org.ws4d.coap.connection;
 
-import java.io.ByteArrayOutputStream;
-import java.net.InetAddress;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.ws4d.coap.interfaces.CoapClient;
 import org.ws4d.coap.interfaces.CoapClientChannel;
 import org.ws4d.coap.interfaces.CoapMessage;
@@ -32,11 +31,17 @@ import org.ws4d.coap.messages.CoapEmptyMessage;
 import org.ws4d.coap.messages.CoapPacketType;
 import org.ws4d.coap.messages.CoapRequestCode;
 
+import java.io.ByteArrayOutputStream;
+import java.net.InetAddress;
+
 /**
  * @author Christian Lerche <christian.lerche@uni-rostock.de>
  */
 
 public class BasicCoapClientChannel extends BasicCoapChannel implements CoapClientChannel {
+
+	private static final Logger logger = LoggerFactory.getLogger(BasicCoapClientChannel.class);
+
 	CoapClient client = null;
 	ClientBlockContext blockContext = null;
 	CoapRequest lastRequest = null;
@@ -51,6 +56,7 @@ public class BasicCoapClientChannel extends BasicCoapChannel implements CoapClie
 	
 	@Override
     public void close() {
+		logger.debug("closing");
         socketHandler.removeClientChannel(this);
     }
 

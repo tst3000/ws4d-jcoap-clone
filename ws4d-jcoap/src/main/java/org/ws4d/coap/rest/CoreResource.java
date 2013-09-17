@@ -1,13 +1,14 @@
 
 package org.ws4d.coap.rest;
 
-import java.util.HashMap;
-import java.util.Vector;
-
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.ws4d.coap.interfaces.CoapChannel;
 import org.ws4d.coap.interfaces.CoapRequest;
 import org.ws4d.coap.messages.CoapMediaType;
+
+import java.util.HashMap;
+import java.util.Vector;
 
 /**
  * Well-Known CoRE support (draft-ietf-core-link-format-05)
@@ -17,7 +18,7 @@ import org.ws4d.coap.messages.CoapMediaType;
  */
 public class CoreResource implements CoapResource {
 	/* use the logger of the resource server */
-	private final static Logger logger = Logger.getLogger(CoapResourceServer.class); 
+	private static final Logger logger = LoggerFactory.getLogger(CoreResource.class);
     private final static String uriPath = "/.well-known/core";
     private HashMap<Resource, String> coreStrings = new HashMap<Resource, String>();
     ResourceServer serverListener = null; 

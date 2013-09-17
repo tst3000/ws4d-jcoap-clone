@@ -1,5 +1,17 @@
 package org.ws4d.coap.rest;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.ws4d.coap.Constants;
+import org.ws4d.coap.connection.BasicCoapChannelManager;
+import org.ws4d.coap.interfaces.CoapChannelManager;
+import org.ws4d.coap.interfaces.CoapMessage;
+import org.ws4d.coap.interfaces.CoapRequest;
+import org.ws4d.coap.interfaces.CoapServer;
+import org.ws4d.coap.interfaces.CoapServerChannel;
+import org.ws4d.coap.messages.CoapRequestCode;
+import org.ws4d.coap.messages.CoapResponseCode;
+
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
@@ -9,35 +21,19 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Vector;
 
-import org.apache.log4j.ConsoleAppender;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.apache.log4j.SimpleLayout;
-import org.ws4d.coap.Constants;
-import org.ws4d.coap.connection.BasicCoapChannelManager;
-import org.ws4d.coap.connection.BasicCoapSocketHandler;
-import org.ws4d.coap.interfaces.CoapChannelManager;
-import org.ws4d.coap.interfaces.CoapMessage;
-import org.ws4d.coap.interfaces.CoapRequest;
-import org.ws4d.coap.interfaces.CoapServer;
-import org.ws4d.coap.interfaces.CoapServerChannel;
-import org.ws4d.coap.messages.CoapRequestCode;
-import org.ws4d.coap.messages.CoapResponseCode;
-
 /**
  * @author Christian Lerche <christian.lerche@uni-rostock.de>
  */
 
 public class CoapResourceServer implements CoapServer, ResourceServer {
     private  int port  = 0;
-    private final static Logger logger = Logger.getLogger(CoapResourceServer.class); 
-    
+
+	private static final Logger logger = LoggerFactory.getLogger(CoapResourceServer.class);
+
     protected HashMap<String, Resource> resources = new HashMap<String, Resource>();
     private CoreResource coreResource = new CoreResource(this);
 
     public CoapResourceServer(){
-    	logger.addAppender(new ConsoleAppender(new SimpleLayout()));
-    	logger.setLevel(Level.WARN);
     }
     
     public HashMap<String, Resource> getResources(){
